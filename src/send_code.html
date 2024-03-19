@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    </head>
+    <body>
+        <div
+            style="
+                margin: 10px auto;
+                background: white;
+                padding: 10px 50px;
+                border-radius: 6px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                width: max-content;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            "
+        >
+            <div style="display: flex">
+                <img
+                    src="https://res.cloudinary.com/djfuej9ry/image/upload/v1710163559/jarradShop/logo_xgkc51.png"
+                    alt="logo"
+                    class="logo"
+                    style="
+                        width: 100px;
+                        object-fit: cover;
+                        margin-right: auto;
+                        margin-left: auto;
+                        margin-bottom: 20px;
+                    "
+                />
+            </div>
+            <div style="margin-bottom: 20px">
+                <strong style="font-size: 24px; color: #333">Welcome to Jamela Fashion</strong>
+                <p style="font-size: 16px; font-weight: 600; color: #555">
+                    Your verification code is:
+                </p>
+            </div>
+            <div>
+                <div
+                    style="
+                        display: inline-block;
+                        height: 30px;
+                        background: #333;
+                        color: white;
+                        letter-spacing: 5px;
+                        border-radius: 6px;
+                        font-size: 20px;
+                        margin-bottom: 20px;
+                        padding: 0 20px;
+                    "
+                >
+                    {{code}}
+                </div>
+                <div
+                    style="
+                        padding: 0 10px;
+                        background-color: #467dc6;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        font-size: 20px;
+                        display: inline-block;
+                        height: 30px;
+                        margin-left: 10px;
+                    "
+                    onClick="{{copyToClipboard}}"
+                >
+                    Copy
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
