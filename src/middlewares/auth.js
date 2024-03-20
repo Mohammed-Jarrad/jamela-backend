@@ -1,32 +1,37 @@
-import { request, response } from 'express'
 import jwt from 'jsonwebtoken'
 import userModel from '../../DB/model/user.model.js'
+import { request, response } from "express"
 
-export const auth = (allowedRoles = []) => {
-    return async (req = request, res = response, next) => {
-        const { authorization } = req.headers
-        // check if authorization is valid
-        if (!authorization?.startsWith(process.env.BEARER_KEY))
-            return res.status(400).json({ message: 'Invalid authorization.' })
+export const auth = (allowedRoles = []) => (req = request, res = response, next) => {
+    const { authorization: authHeader } = req.headers || {}
+    if (!authHeader?.startsWith(process.env.BEARER_KEY)) {
+        return res.status(400).json({ message: 'Invalid authorization.' })
+    }
 
-        const token = authorization.split(process.env.BEARER_KEY)[1]
-        const decoded = jwt.verify(token, process.env.LOGIN_SECRET)
-        const user = await userModel
-            .findById(decoded.id)
+    const token = authHeader.split(process.env.BEARER_KEY)[1]
+
+    jwt.verify(token, process.env.LOGIN_SECRET, async (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ message: 'Invalid token.', action: 'logout' })
+        }
+
+        const user = await userModel.findById(decoded.id)
             .select('username email role changePasswordTime wishList')
-        //  check if user is valid
-        if (!user) return res.status(404).json({ message: 'User not found.', action: 'logout' })
-        //  check if token is expired
-        if (user.changePasswordTime)
-            if (parseInt(user.changePasswordTime.getTime() / 1000) > decoded.iat)
-                return next(new Error(`token expired`, { cause: 400 }))
-        // check if user role is allowed
-        if (!allowedRoles.includes(user.role))
-            return res.status(403).json({ message: 'Not allowed.' })
-        // set user to req.user
+
+        if (!user || allowedRoles.indexOf(user.role) === -1) {
+            return res.status(user ? 403 : 404).json({
+                message: user ? 'Not allowed.' : 'User not found.',
+                action: 'logout',
+            })
+        }
+
+        if (user.changePasswordTime && user.changePasswordTime > decoded.iat * 1000) {
+            return next(new Error(`token expired`, { cause: 400 }))
+        }
+
         req.user = user
         next()
-    }
+    })
 }
 
 export const roles = {
@@ -34,3 +39,4 @@ export const roles = {
     user: 'User',
 }
 export const { admin, user } = roles
+

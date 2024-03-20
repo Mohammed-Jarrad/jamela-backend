@@ -144,7 +144,6 @@ export const checkCode = asyncHandler(async (req = request, res = response, next
         expiresIn: '10m',
     })
     return res.status(200).json({ message: 'success', token: resetPasswordToken })
-    // return res.redirect(`${process.env.FRONTEND_RESET_PASSWORD_PAGE}/${resetPasswordToken}`)
 })
 // RESET PASSWORD /
 export const resetPassword = asyncHandler(async (req = request, res = response, next) => {
