@@ -66,7 +66,7 @@ const productSchema = new Schema(
         subcategoryId: {
             type: Types.ObjectId,
             ref: 'Subcategory',
-            required: true,
+            // required: true,
         },
         status: {
             type: String,

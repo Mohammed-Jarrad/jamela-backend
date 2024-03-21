@@ -19,15 +19,13 @@ export const asyncHandler = (fn) => {
             }
 
             // handle error
-            return next(
-                new Error(error.message || 'Internal Server Error', { cause: error.status || 500 })
-            )
+            return next(new Error(error.message || 'Internal Server Error', { cause: error.status || 500 }))
         }
     }
 }
 
 export const globalErrorHandler = (err, _req, res, _next) => {
-    console.log({ err, stack: err.stack })
+    console.log({ err: err.message, stack: err.stack })
 
     // handle error
     return res.status(err.cause || 500).json({ message: err.message || 'Internal Server Error' })

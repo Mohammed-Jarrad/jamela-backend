@@ -3,12 +3,7 @@ import slugify from 'slugify'
 import categoryModel from '../../../DB/model/category.model.js'
 import productModel from '../../../DB/model/product.model.js'
 import subcategoryModel from '../../../DB/model/subcategroy.model.js'
-import {
-    getFormatQuery,
-    getSearchQuery,
-    getSelectQuery,
-    getSortQuery,
-} from '../../utils/apiFilter.js'
+import { getFormatQuery, getSearchQuery, getSelectQuery, getSortQuery } from '../../utils/apiFilter.js'
 import { cloudinaryRemoveImage, cloudinaryUploadImage } from '../../utils/cloudinary.js'
 import { asyncHandler } from '../../utils/error.js'
 import { pagination } from '../../utils/pagination.js'
@@ -28,14 +23,17 @@ export const createProduct = asyncHandler(async (req = request, res = response, 
     if (await productModel.findOne({ name })) {
         return next(new Error(`This product already exists.`, { cause: 409 }))
     }
-    const checkSubcategory = await subcategoryModel.findById(subcategoryId)
-    if (!checkSubcategory) return next(new Error(`Subcategory not found.`, { cause: 404 }))
-    if (checkSubcategory.categoryId.toString() !== categoryId) {
-        return next(new Error(`Subcategory not found in this category.`, { cause: 404 }))
+    // check if subcategory is in the category
+    if (subcategoryId) {
+        const sub = await subcategoryModel.findById(subcategoryId)
+        if (!sub) return next(new Error(`Subcategory not found.`, { cause: 404 }))
+        if (sub.categoryId.toString() !== categoryId) {
+            return next(new Error(`Subcategory not found in this category.`, { cause: 404 }))
+        }
     }
     // generate slug and final price
     req.body.slug = slugify(name)
-    req.body.finalPrice = price - price * (discount / 100).toFixed(2)
+    req.body.finalPrice = (price - price * (discount / 100)).toFixed(2)
     // upload main image to cloudinary
     req.body.mainImage = await cloudinaryUploadImage(
         req.files.mainImage[0].path,
@@ -44,10 +42,7 @@ export const createProduct = asyncHandler(async (req = request, res = response, 
     // upload sub images to cloudinary
     req.body.subImages = await Promise.all(
         req.files.subImages.map(async (subImage) => {
-            return await cloudinaryUploadImage(
-                subImage.path,
-                `${process.env.APP_NAME}/products/${name}/subImages`
-            )
+            return await cloudinaryUploadImage(subImage.path, `${process.env.APP_NAME}/products/${name}/subImages`)
         })
     )
     // set createdBy and updatedBy
@@ -69,7 +64,6 @@ export const updateProduct = asyncHandler(async (req = request, res = response, 
     const { id: productId } = req.params
     const {
         categoryId,
-        subcategoryId,
         name,
         description,
         price,
@@ -84,20 +78,26 @@ export const updateProduct = asyncHandler(async (req = request, res = response, 
     const { mainImage, newSubImages } = req.files
     const product = await productModel.findById(productId)
     if (!product) return next(new Error(`Product not found.`, { cause: 404 }))
-    // check if category and subcategory founded and check if the subcategory is in the category
-    if (categoryId && !subcategoryId)
-        return next(new Error(`Subcategory is required.`, { cause: 400 }))
+
+    // check if category founded and check if the subcategory founded and check if the subcategory is in the category
     if (categoryId) {
         const checkCategory = await categoryModel.findById(categoryId)
         if (!checkCategory) return next(new Error(`Category not found.`, { cause: 404 }))
-        const checkSubcategory = await subcategoryModel.findById(subcategoryId)
-        if (!checkSubcategory) return next(new Error(`Subcategory not found.`, { cause: 404 }))
-        if (checkSubcategory.categoryId.toString() !== categoryId)
-            return next(new Error(`Subcategory not found in this category.`, { cause: 404 }))
         product.categoryId = categoryId
-        product.subcategoryId = subcategoryId
     }
 
+    // update subcatery or remove it from the product
+    if ('subcategoryId' in req.body) {
+        if (!req.body.subcategoryId) product.subcategoryId = null
+        else {
+            const sub = await subcategoryModel.findById(req.body.subcategoryId)
+            if (!sub) return next(new Error(`Subcategory not found.`, { cause: 404 }))
+            if (sub.categoryId.toString() !== product.categoryId.toString()) {
+                return next(new Error(`Subcategory not found in this category.`, { cause: 404 }))
+            }
+            product.subcategoryId = req.body.subcategoryId
+        }
+    }
     // Update name
     if (name) {
         if (await productModel.findOne({ name, _id: { $ne: productId } }))
@@ -156,9 +156,7 @@ export const updateProduct = asyncHandler(async (req = request, res = response, 
     if (removedPublicIds && removedPublicIds.length > 0) {
         for (const publicId of removedPublicIds) {
             await cloudinaryRemoveImage(publicId) // delete sub image from cloudinary
-            product.subImages = product.subImages.filter(
-                (subImage) => subImage.public_id !== publicId
-            ) // remove sub image from sub images array
+            product.subImages = product.subImages.filter((subImage) => subImage.public_id !== publicId) // remove sub image from sub images array
         }
     }
     // Update person who updated

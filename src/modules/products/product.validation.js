@@ -12,21 +12,12 @@ export const update = joi.object({
     sizes: generalFields.sizes.optional(),
     colors: joi.array().items(joi.string()),
     categoryId: generalFields.id,
-    subcategoryId: generalFields.id,
+    subcategoryId: generalFields.id.allow(''),
     removedPublicIds: joi.array().items(joi.string()),
     id: generalFields.id.required(),
     file: joi.object({
-        mainImage: joi
-            .array()
-            .items(generalFields.file.required())
-            .length(1)
-            .label('Primary image'),
-        newSubImages: joi
-            .array()
-            .items(generalFields.file.required())
-            .max(4)
-            .min(1)
-            .label('Secondary images'),
+        mainImage: joi.array().items(generalFields.file.required()).length(1).label('Primary image'),
+        newSubImages: joi.array().items(generalFields.file.required()).max(4).min(1).label('Secondary images'),
     }),
 })
 
@@ -38,12 +29,7 @@ export const create = joi.object({
     discount: joi.number().positive().min(1).allow(0),
     file: joi
         .object({
-            mainImage: joi
-                .array()
-                .items(generalFields.file.required())
-                .length(1)
-                .required()
-                .label('Primary image'),
+            mainImage: joi.array().items(generalFields.file.required()).length(1).required().label('Primary image'),
             subImages: joi
                 .array()
                 .items(generalFields.file.required())
@@ -56,7 +42,7 @@ export const create = joi.object({
     sizes: generalFields.sizes.optional(),
     colors: joi.array().items(joi.string()).label('Colors'),
     categoryId: generalFields.id.required().label('Category'),
-    subcategoryId: generalFields.id.required().label('Subcategory'),
+    subcategoryId: generalFields.id.optional().label('Subcategory'),
 })
 
 export const deleteOne = joi.object({
