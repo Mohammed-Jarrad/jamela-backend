@@ -18,34 +18,39 @@ const validateProduct = async (productId, quantity, color, size) => {
      * @route /carts
      * @method POST
      * @access logged in user
-     -----------------------------------------------------------------
-    */
+     ----------------------------------------------------------------
+*/
 export const createCartorAddToCart = asyncHandler(async (req = request, res = response, next) => {
     const { productId, quantity = 1, color, size } = req.body
     // validate product data and get product
     const validate_product = await validateProduct(productId, quantity, color, size)
-    if (validate_product.error)
-        return next(new Error(validate_product.error, { cause: validate_product.cause || 400 }))
+    if (validate_product.error) return next(new Error(validate_product.error, { cause: validate_product.cause || 400 }))
     // check if user already have a cart
     const cart = await cartModel.findOne({ userId: req.user._id })
     //  create new cart if not found and add product to it
     if (!cart) {
         const newCart = await cartModel.create({
             userId: req.user._id,
-            products: [{ productId, quantity, ...(color && { color }), ...(size && { size }) }],
+            products: [
+                {
+                    productId,
+                    quantity: quantity,
+                    ...(color && { color }),
+                    ...(size && { size }),
+                },
+            ],
         })
         return res.status(201).json({ message: 'success', cart: newCart })
     }
     // check if the product already exist in the cart
-    const productIndex = cart.products.findIndex((p) => {
-        if (p.productId.toString() !== productId) return false
-        if (color && p.color !== color) return false
-        if (size && p.size !== size) return false
+    const productIndex = cart.products.findIndex((item) => {
+        if (item.productId.toString() !== productId) return false
+        if (color && item.color !== color) return false
+        if (size && item.size !== size) return false
         return true
     })
-    const productFound = productIndex !== -1
     // increase the quantity by 1
-    if (productFound) {
+    if (productIndex !== -1) {
         cart.products[productIndex].quantity += quantity
     } else {
         // add new product to cart
@@ -66,7 +71,7 @@ export const createCartorAddToCart = asyncHandler(async (req = request, res = re
      * @method PATCH
      * @access logged in user
      -----------------------------------------------------------------
-    */
+*/
 export const removeItem = asyncHandler(async (req = request, res = response, next) => {
     const { itemId } = req.body
     const cart = await cartModel.updateOne(
@@ -109,6 +114,7 @@ export const updateQuantity = asyncHandler(async (req = request, res = response,
      * @access logged in user
      -----------------------------------------------------------------
 */
+
 export const updateSizeOrColor = asyncHandler(async (req = request, res = response, next) => {
     const { itemId, productId, size, color } = req.body
     const check = await cartModel.findOne({
@@ -138,25 +144,50 @@ export const updateSizeOrColor = asyncHandler(async (req = request, res = respon
     return res.status(200).json({ message: 'success', cart })
 })
 
+/** ----------------------------------------------------------------
+     * @desc clear cart
+     * @route /carts/clearCart
+     * @method PATCH
+     * @access logged in user
+     -----------------------------------------------------------------
+*/
+
 export const clearCart = asyncHandler(async (req = request, res = response, next) => {
-    const cart = await cartModel.findOneAndUpdate(
-        { userId: req.user._id },
-        { products: [] },
-        { new: true }
-    )
+    const cart = await cartModel.findOneAndUpdate({ userId: req.user._id }, { products: [] }, { new: true })
     if (!cart) return next(new Error(`Cart not found.`, { cause: 404 }))
     return res.status(200).json({ message: 'success', cart })
 })
 
+/** ----------------------------------------------------------------
+     * @desc get cart
+     * @route /carts
+     * @method GET
+     * @access logged in user
+     -----------------------------------------------------------------
+*/
 export const get = asyncHandler(async (req = request, res = response, next) => {
-    const cart = await cartModel.populate({ path: 'products', populate: { path: 'productId' } })
+    const cart = await cartModel.findOne({ userId: req.user._id }).populate({
+        path: 'products',
+        populate: {
+            path: 'productId',
+            populate: {
+                path: 'categoryId',
+                select: 'name',
+            },
+        },
+    })
     if (!cart) return next(new Error(`Cart not found.`, { cause: 404 }))
     return res.status(200).json({ message: 'success', cart })
 })
 
+/** ----------------------------------------------------------------
+     * @desc get all carts
+     * @route /carts/getAll
+     * @method GET
+     * @access Admin only
+     -----------------------------------------------------------------
+*/
 export const getAll = asyncHandler(async (req = request, res = response, next) => {
-    const carts = await cartModel
-        .find()
-        .populate({ path: 'products', populate: { path: 'productId' } })
+    const carts = await cartModel.find().populate({ path: 'products', populate: { path: 'productId' } })
     return res.status(200).json({ message: 'success', carts })
 })

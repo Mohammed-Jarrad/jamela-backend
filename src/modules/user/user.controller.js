@@ -22,19 +22,7 @@ export const getProfile = asyncHandler(async (req = request, res = response, nex
         .select('-password -code -changePasswordTime')
         .populate({
             path: 'wishList',
-            // select: 'name slug price mainImage discount finalPrice categoryId',
             populate: { path: 'categoryId', select: 'name' },
-        })
-        .populate({
-            path: 'cart',
-            populate: {
-                path: 'products.productId',
-                select: 'name slug price mainImage discount finalPrice stock sizes colors',
-                populate: {
-                    path: 'categoryId',
-                    select: 'name',
-                },
-            },
         })
     if (!user) return next(new Error(`User not found.`, { cause: 404 }))
     return res.status(200).json({ message: 'success', user })

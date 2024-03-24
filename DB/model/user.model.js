@@ -79,17 +79,8 @@ const userSchema = new Schema(
     },
     {
         timestamps: true,
-        toJSON: { virtuals: true },
-        toObject: { virtuals: true },
     }
 )
-
-userSchema.virtual('cart', {
-    ref: 'Cart',
-    localField: '_id',
-    foreignField: 'userId',
-    justOne: true,
-})
 
 userSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
     try {

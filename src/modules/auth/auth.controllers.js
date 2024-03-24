@@ -86,7 +86,7 @@ export const signIn = asyncHandler(async (req = request, res = response, next) =
         .findById(user._id)
         .select('-password -changePasswordTime -code -confirmEmail')
         .populate('wishList')
-        .populate('cart')
+        
     res.status(200).json({ message: 'success', token, user: currentUser })
 })
 // CONFIRM EMAIL => /auth/confirmEmail/:token
