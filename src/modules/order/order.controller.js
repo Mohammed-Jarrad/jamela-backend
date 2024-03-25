@@ -18,7 +18,6 @@ import { checkCouponService } from '../coupon/coupon.service.js'
 export const createOrder = asyncHandler(async (req = request, res = response, next) => {
     const userId = req.user._id
     const { couponName, paymentType, address, phoneNumber, note } = req.body
-    const user = await userModel.findById(userId)
     // check cart
     const cart = await cartModel.findOne({ userId })
     if (!cart) return next(new Error('Cart not found.', { cause: 404 }))
@@ -28,28 +27,28 @@ export const createOrder = asyncHandler(async (req = request, res = response, ne
     // check coupon
     let coupon
     if (couponName) {
-        const { coupon, message, statusCode } = await checkCouponService(couponName, userId)
-        if (!coupon) return next(new Error(message, { cause: statusCode }))
-        else coupon = coupon
+        const { coupon: couponObj, message, statusCode } = await checkCouponService(couponName, userId)
+        if (!couponObj) return next(new Error(message, { cause: statusCode }))
+        else coupon = couponObj
     }
     // check the products
     let subTotals = 0
-    const finalProductsList = []
-    for (const product of req.body.products) {
-        const { name: productName } = await productModel.findById(product.productId).select('name')
+    let finalProductsList = []
+    for (const cartItem of req.body.products) {
+        const { name: productName } = await productModel.findById(cartItem.productId).select('name')
         const checkProduct = await productModel.findOne({
-            _id: product.productId,
-            stock: { $gte: product.quantity },
+            _id: cartItem.productId,
+            stock: { $gte: cartItem.quantity },
         })
         if (!checkProduct) {
             return next(new Error(`${productName} quantity not available`, { cause: 400 }))
         }
         const updatedProduct = {
-            ...product.toObject(),
+            ...cartItem.toObject(),
             name: checkProduct.name,
             unitPrice: checkProduct.price,
             discount: checkProduct.discount,
-            finalPrice: checkProduct.finalPrice * product.quantity,
+            finalPrice: checkProduct.finalPrice * cartItem.quantity,
         }
         subTotals += updatedProduct.finalPrice
         finalProductsList.push(updatedProduct)
@@ -59,21 +58,21 @@ export const createOrder = asyncHandler(async (req = request, res = response, ne
         userId,
         products: finalProductsList,
         finalPrice: subTotals - (subTotals * (coupon?.amount ?? 0)) / 100,
-        address: address || user.address,
-        phoneNumber: phoneNumber || user.phone,
+        address,
+        phoneNumber,
         ...(paymentType && { paymentType }), // add payment type if founded
         ...(note && { note }), // add note if founded
         ...(couponName && { couponName }), // add the coupon name if founded
     })
     // change the stock of each product in the database
-    for (const product of req.body.products) {
+    for (const cartItem of req.body.products) {
         await productModel.updateOne(
-            { _id: product.productId },
-            { $inc: { stock: -1 * product.quantity } }
+            { _id: cartItem.productId },
+            { $inc: { stock: -1 * cartItem.quantity } }
         )
     }
     // add the user to usedBy list in the coupon it the coupon used
-    if (couponName) {
+    if (coupon) {
         await couponModel.updateOne({ _id: coupon._id }, { $addToSet: { usedBy: userId } })
     }
     // clear the cart

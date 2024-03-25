@@ -5,7 +5,7 @@ export const checkCouponService = async (couponName, userId) => {
     if (!coupon)
         return {
             coupon: null,
-            message: 'Coupon not found.',
+            message: `Coupon ${couponName} not found`,
             statusCode: 404,
         }
 

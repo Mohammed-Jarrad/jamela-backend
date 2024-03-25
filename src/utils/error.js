@@ -25,7 +25,8 @@ export const asyncHandler = (fn) => {
 }
 
 export const globalErrorHandler = (err, _req, res, _next) => {
-    console.log({ err: err.message, stack: err.stack })
+    console.log(err)
+    console.log('stack: ', err.stack)
 
     // handle error
     return res.status(err.cause || 500).json({ message: err.message || 'Internal Server Error' })

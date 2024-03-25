@@ -2,11 +2,11 @@ import joi from 'joi'
 import { generalFields } from '../../middlewares/validation.js'
 
 export const create = joi.object({
-    couponName: joi.string(),
+    couponName: joi.string().max(10).optional().allow(''),
     paymentType: joi.string().valid('cash', 'card'),
-    address: joi.string(),
-    phoneNumber: joi.string(),
-    note: joi.string(),
+    address: joi.string().required(),
+    phoneNumber: joi.string().required(),
+    note: joi.string().optional(),
 })
 
 export const cancel = joi.object({

@@ -4,13 +4,30 @@ import productModel from '../../../DB/model/product.model.js'
 import { asyncHandler } from '../../utils/error.js'
 
 // Helper functions
-const validateProduct = async (productId, quantity, color, size) => {
-    const product = await productModel.findOne({ _id: productId, stock: { $gte: quantity } })
-    if (!product) return { error: 'Product not found or out of stock.', cause: 404 }
-    if (product.colors.length && !color) return { error: 'Please select a color.', cause: 400 }
-    if (color && !product.colors.includes(color)) return { error: 'Color not found.', cause: 404 }
-    if (product.sizes.length && !size) return { error: 'Please select a size.', cause: 400 }
-    if (size && !product.sizes.includes(size)) return { error: 'Size not found.', cause: 404 }
+const validateProduct = async (userId, productId, quantity, color, size) => {
+    const pro = await productModel.findById(productId)
+    if (!pro) return { error: 'Product not found.', cause: 404 }
+    
+    const cart = await cartModel.findOne({ userId })
+    let qtyInCart = 0
+    if (cart) {
+        for (const item of cart.products) {
+            if (item.productId.toString() === productId) {
+                qtyInCart += item.quantity
+            }
+        }
+    }
+
+    const finalStock = pro.stock - qtyInCart
+
+    if (finalStock < quantity) return { error: 'Not enough stock', cause: 400 }
+    if (pro.stock == 0) return { error: 'Out of stock', cause: 400 }
+
+    if (pro.colors.length && !color) return { error: 'Please select a color.', cause: 400 }
+    if (color && !pro.colors.includes(color)) return { error: 'Color not found.', cause: 404 }
+    if (pro.sizes.length && !size) return { error: 'Please select a size.', cause: 400 }
+    if (size && !pro.sizes.includes(size)) return { error: 'Size not found.', cause: 404 }
+
     return { error: null }
 }
 /** ----------------------------------------------------------------
@@ -23,7 +40,7 @@ const validateProduct = async (productId, quantity, color, size) => {
 export const createCartorAddToCart = asyncHandler(async (req = request, res = response, next) => {
     const { productId, quantity = 1, color, size } = req.body
     // validate product data and get product
-    const validate_product = await validateProduct(productId, quantity, color, size)
+    const validate_product = await validateProduct(req.user._id, productId, quantity, color, size)
     if (validate_product.error) return next(new Error(validate_product.error, { cause: validate_product.cause || 400 }))
     // check if user already have a cart
     const cart = await cartModel.findOne({ userId: req.user._id })
