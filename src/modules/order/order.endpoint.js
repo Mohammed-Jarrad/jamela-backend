@@ -6,4 +6,9 @@ export const endPoints = {
     getOrdersForUser: [user],
     getAll: [admin],
     changeStatus: [admin],
+    changeCoupon: [user],
+    removeCoupon: [user],
+    editNote: [user],
+    delete: [admin],
+    acceptAll: [admin]
 }

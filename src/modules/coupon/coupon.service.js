@@ -1,11 +1,18 @@
-import couponModel from '../../../DB/model/coupon.model.js'
+import Coupon from '../../../DB/model/coupon.model.js'
 
 export const checkCouponService = async (couponName, userId) => {
-    const coupon = await couponModel.findOne({ name: couponName })
+    const coupon = await Coupon.findOne({ name: couponName })
     if (!coupon)
         return {
             coupon: null,
             message: `Coupon ${couponName} not found`,
+            statusCode: 404,
+        }
+
+    if (coupon.isDeleted)
+        return {
+            coupon: null,
+            message: 'Coupon not working',
             statusCode: 404,
         }
 

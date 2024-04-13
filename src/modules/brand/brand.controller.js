@@ -1,8 +1,8 @@
 import { request, response } from "express";
+import slugify from 'slugify';
 import brandModel from "../../../DB/model/brand.model.js";
-import { asyncHandler } from "../../utils/error.js"; 
-import slugify from 'slugify';   
 import { cloudinaryRemoveImage, cloudinaryUploadImage } from "../../utils/cloudinary.js";
+import { asyncHandler } from "../../utils/error.js";
 
 /** ----------------------------------------------------------------
  * @desc create new brand

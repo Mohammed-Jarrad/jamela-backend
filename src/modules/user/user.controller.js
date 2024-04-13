@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { request, response } from 'express'
-import productModel from '../../../DB/model/product.model.js'
-import userModel from '../../../DB/model/user.model.js'
+import Product from '../../../DB/model/product.model.js'
+import User from '../../../DB/model/user.model.js'
 import { admin } from '../../middlewares/auth.js'
 import { getSearchQuery, getSelectQuery, getSortQuery } from '../../utils/apiFilter.js'
 import { cloudinaryRemoveImage, cloudinaryUploadImage } from '../../utils/cloudinary.js'
@@ -17,7 +17,7 @@ import { pagination } from '../../utils/pagination.js'
  */
 export const getProfile = asyncHandler(async (req = request, res = response, next) => {
     const userId = req.user._id
-    const user = await userModel
+    const user = await User
         .findById(userId)
         .select('-password -code -changePasswordTime')
         .populate({
@@ -27,6 +27,7 @@ export const getProfile = asyncHandler(async (req = request, res = response, nex
     if (!user) return next(new Error(`User not found.`, { cause: 404 }))
     return res.status(200).json({ message: 'success', user })
 })
+
 /** ----------------------------------------------------------------
  * @desc update profile
  * @route /users/profile/update
@@ -36,7 +37,7 @@ export const getProfile = asyncHandler(async (req = request, res = response, nex
  */
 export const updateProfile = asyncHandler(async (req = request, res = response, next) => {
     const userId = req.user._id
-    const user = await userModel.findById(userId)
+    const user = await User.findById(userId)
     if (!user) return next(new Error(`User not found.`, { cause: 404 }))
     const { username, phone, address, gender, newPassword, oldPassword } = req.body
     username && (user.username = username)
@@ -69,9 +70,9 @@ export const updateProfile = asyncHandler(async (req = request, res = response, 
  */
 export const addProductToWishlist = asyncHandler(async (req = request, res = response, next) => {
     const { id } = req.params
-    const product = await productModel.findById(id)
+    const product = await Product.findById(id)
     if (!product) return next(new Error(`Product with id '${id}' not found.`, { cause: 404 }))
-    const user = await userModel.findById(req.user._id)
+    const user = await User.findById(req.user._id)
     if (!user) return next(new Error(`User not found.`, { cause: 404 }))
     if (user.wishList.includes(product._id)) {
         user.wishList = user.wishList.filter((productId) => productId.toString() !== product._id.toString()) // remove product
@@ -102,16 +103,16 @@ export const getAllUsers = asyncHandler(async (req = request, res = response) =>
                 .join(' ')
           : selectString
 
-    const users = await userModel
+    const users = await User
         .find({ ...searchObj, _id: { $ne: req.user._id } })
         .skip(skip)
         .limit(limit)
         .sort(sortString)
         .select(finalSelectString)
 
-    const totalResultsCounts = (await userModel.find({ ...searchObj, _id: { $ne: req.user._id } })).length
+    const totalResultsCounts = (await User.find({ ...searchObj, _id: { $ne: req.user._id } })).length
 
-    const totalCount = await userModel.estimatedDocumentCount()
+    const totalCount = await User.estimatedDocumentCount()
 
     return res.json({
         message: 'success',
@@ -131,7 +132,7 @@ export const getAllUsers = asyncHandler(async (req = request, res = response) =>
 export const changeUserRoleAndStatus = asyncHandler(async (req = request, res = response, next) => {
     const { id } = req.params
     const { status, role } = req.body
-    const user = await userModel.findById(id)
+    const user = await User.findById(id)
     if (!user) return next(new Error(`User with id '${id}' not found.`, { cause: 404 }))
     if (status) {
         if (user.role === admin && status === 'Inactive') {
@@ -154,7 +155,7 @@ export const changeUserRoleAndStatus = asyncHandler(async (req = request, res = 
  */
 export const deleteUser = asyncHandler(async (req = request, res = response, next) => {
     const { id } = req.params
-    const user = await userModel.findById(id)
+    const user = await User.findById(id)
     if (!user) return next(new Error(`User not found.`, { cause: 404 }))
     await user.deleteOne()
     return res.status(200).json({ message: 'success', userId: user._id })

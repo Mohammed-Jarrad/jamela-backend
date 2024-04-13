@@ -1,6 +1,6 @@
 import mongoose, { Schema, Types, model } from 'mongoose'
 import { cloudinaryRemoveImage } from '../../src/utils/cloudinary.js'
-import productModel from './product.model.js'
+import Product from './product.model.js'
 
 const subcategorySchema = new Schema(
     {
@@ -59,7 +59,7 @@ subcategorySchema.pre('deleteOne', { document: true, query: false }, async funct
         // delete subcategory image
         await cloudinaryRemoveImage(this.image.public_id)
         // loop for all products that belong to this subcategory and delete its images and its fields from database
-        const products = await productModel.find({ subcategoryId: this._id })
+        const products = await Product.find({ subcategoryId: this._id })
         for (let product of products) {
             await product.deleteOne()
         }
@@ -69,6 +69,6 @@ subcategorySchema.pre('deleteOne', { document: true, query: false }, async funct
     }
 })
 
-const subcategoryModel = mongoose.models.Subcategory || model('Subcategory', subcategorySchema)
+const Subcategory = mongoose.models.Subcategory || model('Subcategory', subcategorySchema)
 
-export default subcategoryModel
+export default Subcategory

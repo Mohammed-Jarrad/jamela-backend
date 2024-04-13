@@ -13,7 +13,8 @@ export const asyncHandler = (fn) => {
             if (error.name === 'ValidationError') {
                 const messages = []
                 Object.keys(error.errors).forEach((key) => {
-                    messages.push(error.errors[key].message)
+                    const value = error.errors[key]
+                    messages.push(value.message)
                 })
                 return res.status(400).json({ messages, message: 'Validation error.' })
             }

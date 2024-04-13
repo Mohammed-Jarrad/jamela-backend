@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken'
 import { customAlphabet } from 'nanoid'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import userModel from '../../../DB/model/user.model.js'
+import User from '../../../DB/model/user.model.js'
 import { cloudinaryUploadImage } from '../../utils/cloudinary.js'
 import { sendEmail } from '../../utils/email.js'
 import { asyncHandler } from '../../utils/error.js'
@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // SIGN Up
 export const signUp = asyncHandler(async (req = request, res = response, next) => {
     let { email, password } = req.body
-    const user = await userModel.findOne({ email })
+    const user = await User.findOne({ email })
     if (user) {
         return next(new Error(`this email '${email}' is already exists.`, { cause: 409 }))
     }
@@ -36,7 +36,7 @@ export const signUp = asyncHandler(async (req = request, res = response, next) =
     const template = Handlebars.compile(source)
     const html = template({ link })
     await sendEmail(email, 'Confirm Email', html)
-    await userModel.create({
+    await User.create({
         ...req.body,
         email,
         password,
@@ -47,7 +47,7 @@ export const signUp = asyncHandler(async (req = request, res = response, next) =
 // LOGIN
 export const signIn = asyncHandler(async (req = request, res = response, next) => {
     const { email, password } = req.body
-    const user = await userModel.findOne({ email })
+    const user = await User.findOne({ email })
     if (!user) {
         return next(new Error(`invalid email.`, { cause: 400 }))
     }
@@ -64,30 +64,23 @@ export const signIn = asyncHandler(async (req = request, res = response, next) =
         const html = template({ link })
         await sendEmail(email, 'Confirm Email', html)
         return next(
-            new Error(
-                `Please confirm your email first, we sent a verification link to your email.`,
-                {
-                    cause: 400,
-                }
-            )
+            new Error(`Please confirm your email first, we sent a verification link to your email.`, {
+                cause: 400,
+            })
         )
     }
-    if (user.status == 'Inactive')
+    if (user.status == 'Inactive') {
         return next(new Error(`Your account is inactive.`, { cause: 400 }))
+    }
 
-    const token = jwt.sign(
-        { id: user._id, role: user.role, status: user.status },
-        process.env.LOGIN_SECRET,
-        {
-            // expiresIn: '5m',
-        }
-    )
-    const currentUser = await userModel
-        .findById(user._id)
-        .select('-password -changePasswordTime -code -confirmEmail')
-        .populate('wishList')
-        
-    res.status(200).json({ message: 'success', token, user: currentUser })
+    const tokenPayload = {
+        _id: user._id,
+        status: user.status,
+        role: user.role,
+    }
+    const token = jwt.sign(tokenPayload, process.env.LOGIN_SECRET, {})
+
+    res.status(200).json({ message: 'success', token })
 })
 // CONFIRM EMAIL => /auth/confirmEmail/:token
 export const confirmEmail = asyncHandler(async (req = request, res = response, next) => {
@@ -99,10 +92,7 @@ export const confirmEmail = asyncHandler(async (req = request, res = response, n
     if (!decoded) {
         return res.redirect(`${process.env.FRONTEND_LOGIN_PAGE}?message=email-not-confirmed`)
     }
-    const user = await userModel.findOneAndUpdate(
-        { email: decoded.email, confirmEmail: false },
-        { confirmEmail: true }
-    )
+    const user = await User.findOneAndUpdate({ email: decoded.email, confirmEmail: false }, { confirmEmail: true })
     if (!user) {
         return res.redirect(`${process.env.FRONTEND_LOGIN_PAGE}?message=email-not-confirmed`)
     }
@@ -112,7 +102,7 @@ export const confirmEmail = asyncHandler(async (req = request, res = response, n
 export const sendCode = asyncHandler(async (req = request, res = response, next) => {
     const { email } = req.body
     const code = customAlphabet('1234567890', 4)()
-    const user = await userModel.findOneAndUpdate({ email }, { code }, { new: true })
+    const user = await User.findOneAndUpdate({ email }, { code }, { new: true })
     if (!user) {
         return next(new Error(`User not found.`, { cause: 400 }))
     }
@@ -134,11 +124,7 @@ export const checkCode = asyncHandler(async (req = request, res = response, next
     if (!token) return next(new Error(`Invalid operation.`, { cause: 400 }))
     const decoded = jwt.verify(token, process.env.CHECK_CODE_SECRET)
     if (!decoded) return next(new Error(`Invalid operation.`, { cause: 400 }))
-    const user = await userModel.findOneAndUpdate(
-        { email: decoded.email, code },
-        { code: null },
-        { new: true }
-    )
+    const user = await User.findOneAndUpdate({ email: decoded.email, code }, { code: null }, { new: true })
     if (!user) return next(new Error(`Invalid operation, try again.`, { cause: 400 }))
     const resetPasswordToken = jwt.sign({ email: user.email }, process.env.RESET_PASSWORD_SECRET, {
         expiresIn: '10m',
@@ -152,7 +138,7 @@ export const resetPassword = asyncHandler(async (req = request, res = response, 
     if (!token) return next(new Error(`Invalid operation`, { cause: 400 }))
     const decoded = jwt.verify(token, process.env.RESET_PASSWORD_SECRET)
     if (!decoded) return next(new Error(`Invalid operation.`, { cause: 400 }))
-    const user = await userModel.findOne({ email: decoded.email })
+    const user = await User.findOne({ email: decoded.email })
     if (!user) return next(new Error(`User not found, try again.`, { cause: 404 }))
     user.password = await bcrypt.hash(newPassword, parseInt(process.env.SALT_ROUND))
     user.changePasswordTime = Date.now()
@@ -160,6 +146,4 @@ export const resetPassword = asyncHandler(async (req = request, res = response, 
     return res.status(200).json({ message: 'success' })
 })
 // TODO // delete all users accounts, and delete all images that related to these accounts
-export const deleteNotConfirmedUsers = asyncHandler(
-    async (req = request, res = response, next) => {}
-)
+export const deleteNotConfirmedUsers = asyncHandler(async (req = request, res = response, next) => {})

@@ -8,5 +8,6 @@ export const endPoints = {
     softDelete: [admin],
     restore: [admin],
     getSingle: [admin],
-    checkCoupon: [user]
+    checkCoupon: [user],
+    clearCoupon: [admin]
 }

@@ -24,4 +24,7 @@ router.delete('/hardDelete/:id', auth(endPoints.hardDelete), couponController.ha
 // check coupon
 router.post('/checkCoupon', auth(endPoints.checkCoupon), validation(validator.checkCoupon), couponController.checkCoupon)
 
+// clear coupon
+router.patch('/clearCoupon/:id', auth(endPoints.clearCoupon), couponController.clearCoupon)
+
 export default router

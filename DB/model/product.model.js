@@ -66,7 +66,6 @@ const productSchema = new Schema(
         subcategoryId: {
             type: Types.ObjectId,
             ref: 'Subcategory',
-            // required: true,
         },
         status: {
             type: String,
@@ -103,6 +102,6 @@ productSchema.pre('deleteOne', { document: true, query: false }, async function 
     }
 })
 
-const productModel = mongoose.models.Product || model('Product', productSchema)
+const Product = mongoose.models.Product || model('Product', productSchema)
 
-export default productModel
+export default Product

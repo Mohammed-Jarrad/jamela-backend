@@ -1,12 +1,12 @@
 import mongoose, { Schema, Types, model } from 'mongoose'
 import { cloudinaryRemoveImage } from '../../src/utils/cloudinary.js'
 import brandModel from './brand.model.js'
-import cartModel from './cart.model.js'
-import categoryModel from './category.model.js'
-import couponModel from './coupon.model.js'
-import orderModel from './order.model.js'
-import productModel from './product.model.js'
-import subcategoryModel from './subcategroy.model.js'
+import Cart from './cart.model.js'
+import Category from './category.model.js'
+import Coupon from './coupon.model.js'
+import Order from './order.model.js'
+import Product from './product.model.js'
+import Subcategory from './subcategroy.model.js'
 
 const userSchema = new Schema(
     {
@@ -87,29 +87,29 @@ userSchema.pre('deleteOne', { document: true, query: false }, async function (ne
         // delete user image
         if (this.image.public_id) await cloudinaryRemoveImage(this.image.public_id)
         // delete user cart
-        await cartModel.deleteOne({ userId: this._id })
+        await Cart.deleteOne({ userId: this._id })
         // delete assosiated categories
-        const categories = await categoryModel.find({ createdBy: this._id })
+        const categories = await Category.find({ createdBy: this._id })
         for (let category of categories) await category.deleteOne()
         // delete assosiated subcategories
-        const subcategories = await subcategoryModel.find({ createdBy: this._id })
+        const subcategories = await Subcategory.find({ createdBy: this._id })
         for (let subcategory of subcategories) await subcategory.deleteOne()
         // delete assosiated products
-        const products = await productModel.find({ createdBy: this._id })
+        const products = await Product.find({ createdBy: this._id })
         for (let product of products) await product.deleteOne()
         // delete assosiated brands
         const brands = await brandModel.find({ createdBy: this._id })
         for (let brand of brands) await brand.deleteOne()
         // delete assosiated orders
-        await orderModel.deleteMany({ userId: this._id })
+        await Order.deleteMany({ userId: this._id })
         // delete assosiated coupons
-        await couponModel.deleteMany({ userId: this._id })
+        await Coupon.deleteMany({ userId: this._id })
         next()
     } catch (error) {
         next(error)
     }
 })
 
-const userModel = mongoose.models.User || model('User', userSchema)
+const User = mongoose.models.User || model('User', userSchema)
 
-export default userModel
+export default User

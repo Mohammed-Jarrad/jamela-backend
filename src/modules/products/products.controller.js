@@ -1,8 +1,8 @@
 import { request, response } from 'express'
 import slugify from 'slugify'
-import categoryModel from '../../../DB/model/category.model.js'
-import productModel from '../../../DB/model/product.model.js'
-import subcategoryModel from '../../../DB/model/subcategroy.model.js'
+import Category from '../../../DB/model/category.model.js'
+import Product from '../../../DB/model/product.model.js'
+import Subcategory from '../../../DB/model/subcategroy.model.js'
 import { getFormatQuery, getSearchQuery, getSelectQuery, getSortQuery } from '../../utils/apiFilter.js'
 import { cloudinaryRemoveImage, cloudinaryUploadImage } from '../../utils/cloudinary.js'
 import { asyncHandler } from '../../utils/error.js'
@@ -18,14 +18,14 @@ import { pagination } from '../../utils/pagination.js'
 export const createProduct = asyncHandler(async (req = request, res = response, next) => {
     const { name, price, discount = 0, categoryId, subcategoryId } = req.body
     // check if category and subcategory founded and check if the subcategory is in the category
-    const checkCategory = await categoryModel.findById(categoryId)
+    const checkCategory = await Category.findById(categoryId)
     if (!checkCategory) return next(new Error(`Category not found.`, { cause: 404 }))
-    if (await productModel.findOne({ name })) {
+    if (await Product.findOne({ name })) {
         return next(new Error(`This product already exists.`, { cause: 409 }))
     }
     // check if subcategory is in the category
     if (subcategoryId) {
-        const sub = await subcategoryModel.findById(subcategoryId)
+        const sub = await Subcategory.findById(subcategoryId)
         if (!sub) return next(new Error(`Subcategory not found.`, { cause: 404 }))
         if (sub.categoryId.toString() !== categoryId) {
             return next(new Error(`Subcategory not found in this category.`, { cause: 404 }))
@@ -49,7 +49,7 @@ export const createProduct = asyncHandler(async (req = request, res = response, 
     req.body.createdBy = req.user._id
     req.body.updatedBy = req.user._id
     // create product
-    const product = await productModel.create(req.body)
+    const product = await Product.create(req.body)
     // got the created product and return it
     return res.status(201).json({ message: 'success', product })
 })
@@ -76,12 +76,12 @@ export const updateProduct = asyncHandler(async (req = request, res = response, 
         isNewArrival,
     } = req.body
     const { mainImage, newSubImages } = req.files
-    const product = await productModel.findById(productId)
+    const product = await Product.findById(productId)
     if (!product) return next(new Error(`Product not found.`, { cause: 404 }))
 
     // check if category founded and check if the subcategory founded and check if the subcategory is in the category
     if (categoryId) {
-        const checkCategory = await categoryModel.findById(categoryId)
+        const checkCategory = await Category.findById(categoryId)
         if (!checkCategory) return next(new Error(`Category not found.`, { cause: 404 }))
         product.categoryId = categoryId
     }
@@ -90,7 +90,7 @@ export const updateProduct = asyncHandler(async (req = request, res = response, 
     if ('subcategoryId' in req.body) {
         if (!req.body.subcategoryId) product.subcategoryId = null
         else {
-            const sub = await subcategoryModel.findById(req.body.subcategoryId)
+            const sub = await Subcategory.findById(req.body.subcategoryId)
             if (!sub) return next(new Error(`Subcategory not found.`, { cause: 404 }))
             if (sub.categoryId.toString() !== product.categoryId.toString()) {
                 return next(new Error(`Subcategory not found in this category.`, { cause: 404 }))
@@ -100,7 +100,7 @@ export const updateProduct = asyncHandler(async (req = request, res = response, 
     }
     // Update name
     if (name) {
-        if (await productModel.findOne({ name, _id: { $ne: productId } }))
+        if (await Product.findOne({ name, _id: { $ne: productId } }))
             return next(new Error(`Product ${name} is already exists.`, { cause: 409 }))
         product.name = name
         product.slug = slugify(name)
@@ -173,9 +173,9 @@ export const updateProduct = asyncHandler(async (req = request, res = response, 
    ----------------------------------------------------------------- */
 export const getProductsWithCategory = asyncHandler(async (req = request, res = response, next) => {
     const { categoryId } = req.params
-    const category = await categoryModel.findById(categoryId)
+    const category = await Category.findById(categoryId)
     if (!category) return next(new Error(`Category not found.`, { cause: 404 }))
-    const products = await productModel.find({ categoryId })
+    const products = await Product.find({ categoryId })
     return res.status(200).json({ message: 'success', products })
 })
 
@@ -189,7 +189,7 @@ export const getProductsWithCategory = asyncHandler(async (req = request, res = 
 export const getProduct = asyncHandler(async (req = request, res = response, next) => {
     if (!req.query.productId && !req.query.slug)
         return next(new Error(`Product id or slug is required.`, { cause: 404 }))
-    const product = await productModel
+    const product = await Product
         .findOne({
             ...(req.query.productId && { _id: req.query.productId }),
             ...(req.query.slug && { slug: req.query.slug }),
@@ -216,7 +216,7 @@ export const getActiveProducts = asyncHandler(async (req = request, res = respon
     const searchObj = getSearchQuery(req.query?.search, 'name', 'description')
     const sortString = getSortQuery(req.query?.sort)
     const selectString = getSelectQuery(req.query?.select)
-    const products = await productModel
+    const products = await Product
         .find({
             status: 'Active',
             ...foramatObj,
@@ -236,8 +236,8 @@ export const getActiveProducts = asyncHandler(async (req = request, res = respon
             },
             { path: 'subcategoryId', select: 'name ' },
         ])
-    const totalCount = await productModel.find({ status: 'Active' }).countDocuments()
-    const totalResultsCounts = await productModel
+    const totalCount = await Product.find({ status: 'Active' }).countDocuments()
+    const totalResultsCounts = await Product
         .find({
             status: 'Active',
             ...foramatObj,
@@ -269,7 +269,7 @@ export const getProducts = asyncHandler(async (req = request, res = response, ne
     const sortString = getSortQuery(req.query?.sort)
     const selectString = getSelectQuery(req.query?.select)
 
-    const products = await productModel
+    const products = await Product
         .find({ ...foramatObj, ...searchObj })
         .limit(limit)
         .skip(skip)
@@ -283,8 +283,8 @@ export const getProducts = asyncHandler(async (req = request, res = response, ne
             },
             { path: 'subcategoryId', select: 'name ' },
         ])
-    const totalCount = await productModel.estimatedDocumentCount()
-    const totalResultsCounts = (await productModel.find({ ...foramatObj, ...searchObj })).length
+    const totalCount = await Product.estimatedDocumentCount()
+    const totalResultsCounts = (await Product.find({ ...foramatObj, ...searchObj })).length
     return res.status(200).json({
         message: 'success',
         totalCount,
@@ -303,7 +303,7 @@ export const getProducts = asyncHandler(async (req = request, res = response, ne
  */
 export const deleteProduct = asyncHandler(async (req = request, res = response, next) => {
     const { id } = req.params
-    const product = await productModel.findById(id)
+    const product = await Product.findById(id)
     if (!product) return next(new Error(`product with id '${id}' not found.`, { cause: 404 }))
     await product.deleteOne()
     return res.status(200).json({ message: 'success', productId: product._id })

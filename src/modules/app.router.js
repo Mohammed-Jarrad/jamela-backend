@@ -12,6 +12,7 @@ import orderRouter from './order/order.router.js'
 import productsRouter from './products/products.router.js'
 import subcategoryRouter from './subcategory/subcategory.router.js'
 import userRoutes from './user/user.router.js'
+import reviewRouter from './review/review.router.js'
 
 const initApp = (app, express) => {
     const whitelist = ['*', ...process.env.WHITE_LIST.split(',')]
@@ -41,6 +42,7 @@ const initApp = (app, express) => {
     app.use('/coupons', couponRouter)
     app.use('/carts', cartRouter)
     app.use('/orders', orderRouter)
+    app.use('/reviews', reviewRouter)
     app.use('/images', imageRoutes)
     app.use('/brands', brandsRouter)
     app.get('*', (req = request, res = response) => {

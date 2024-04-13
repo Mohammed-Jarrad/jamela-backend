@@ -1,6 +1,6 @@
 import { request, response } from 'express'
 import slugify from 'slugify'
-import categoryModel from '../../../DB/model/category.model.js'
+import Category from '../../../DB/model/category.model.js'
 import {
     getFormatQuery,
     getPopulateQuery,
@@ -15,7 +15,7 @@ import { pagination } from '../../utils/pagination.js'
 export const createCategory = asyncHandler(async (req = request, res = response, next) => {
     const name = req.body.name.toLowerCase()
     const userId = req.user._id
-    if (await categoryModel.findOne({ name }).select('name'))
+    if (await Category.findOne({ name }).select('name'))
         return next(
             new Error(`Category name '${name}' already exist.`, {
                 cause: 409,
@@ -25,7 +25,7 @@ export const createCategory = asyncHandler(async (req = request, res = response,
     const { secure_url, public_id } = await cloudinary.uploader.upload(req.file.path, {
         folder: `${process.env.APP_NAME}/categories`,
     })
-    const category = await categoryModel.create({
+    const category = await Category.create({
         name,
         slug: slugify(name),
         image: { secure_url, public_id },
@@ -44,7 +44,7 @@ export const getCategories = asyncHandler(async (req = request, res = response) 
     let populatePath = getPopulateQuery(req.query.populate, 'subcategories')
     let subselectString = getSelectQuery(req.query.subselect)
 
-    let categories = await categoryModel
+    let categories = await Category
         .find({ ...formatObj, ...searchObj })
         .skip(skip)
         .limit(limit)
@@ -52,8 +52,8 @@ export const getCategories = asyncHandler(async (req = request, res = response) 
         .sort(sortString)
         .select(selectString)
 
-    const totalResultsCounts = (await categoryModel.find(searchObj)).length
-    const totalCount = await categoryModel.estimatedDocumentCount()
+    const totalResultsCounts = (await Category.find(searchObj)).length
+    const totalCount = await Category.estimatedDocumentCount()
     return res.json({ message: 'success', totalCount, resultCount: categories.length, totalResultsCounts, categories })
 })
 
@@ -66,7 +66,7 @@ export const getActiveCategories = asyncHandler(async (req = request, res = resp
     let populatePath = getPopulateQuery(req.query.populate, 'subcategories')
     let subselectString = getSelectQuery(req.query.subselect)
 
-    let categories = await categoryModel
+    let categories = await Category
         .find({ status: 'Active', ...formatObj, ...searchObj })
         .skip(skip)
         .limit(limit)
@@ -74,8 +74,8 @@ export const getActiveCategories = asyncHandler(async (req = request, res = resp
         .sort(sortString)
         .select(selectString)
 
-    const totalResultsCounts = await categoryModel.find({ status: 'Active', ...formatObj, ...searchObj }).select('name')
-    const totalCount = await categoryModel.find({ status: 'Active' }).countDocuments()
+    const totalResultsCounts = await Category.find({ status: 'Active', ...formatObj, ...searchObj }).select('name')
+    const totalCount = await Category.find({ status: 'Active' }).countDocuments()
     return res.json({
         message: 'success',
         totalCount,
@@ -91,7 +91,7 @@ export const getCategory = asyncHandler(async (req = request, res = response, ne
     const selectString = getSelectQuery(req.query.select)
     const populatePath = getPopulateQuery(req.query.populate, 'subcategories')
     const subselectString = getSelectQuery(req.query.subselect)
-    const category = await categoryModel
+    const category = await Category
         .findOne({
             ...(categoryId && { _id: categoryId }),
             ...(slug && { slug }),
@@ -105,11 +105,11 @@ export const getCategory = asyncHandler(async (req = request, res = response, ne
 export const updateCategory = asyncHandler(async (req = request, res = response, next) => {
     const { id } = req.params
     const { name, status } = req.body
-    const category = await categoryModel.findById(id)
+    const category = await Category.findById(id)
     if (!category) return next(new Error(`category id ${id} not found.`, { cause: 404 }))
     // update category name & slug
     if (name) {
-        if (await categoryModel.findOne({ name, _id: { $ne: id } }).select('name'))
+        if (await Category.findOne({ name, _id: { $ne: id } }).select('name'))
             return next(
                 new Error(`Category '${name}' is already exist.`, {
                     cause: 409,
@@ -136,7 +136,7 @@ export const updateCategory = asyncHandler(async (req = request, res = response,
 
 export const deleteCategory = asyncHandler(async (req = request, res = response, next) => {
     const { id } = req.params
-    const category = await categoryModel.findById(id)
+    const category = await Category.findById(id)
     if (!category) return next(new Error(`category with id '${id}' not found.`, { cause: 404 }))
     await category.deleteOne()
     return res.status(200).json({ message: 'success', categoryId: category._id })

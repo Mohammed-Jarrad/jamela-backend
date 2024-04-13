@@ -1,14 +1,14 @@
 import { request, response } from 'express'
-import cartModel from '../../../DB/model/cart.model.js'
-import productModel from '../../../DB/model/product.model.js'
+import Cart from '../../../DB/model/cart.model.js'
+import Product from '../../../DB/model/product.model.js'
 import { asyncHandler } from '../../utils/error.js'
 
 // Helper functions
 const validateProduct = async (userId, productId, quantity, color, size) => {
-    const pro = await productModel.findById(productId)
+    const pro = await Product.findById(productId)
     if (!pro) return { error: 'Product not found.', cause: 404 }
     
-    const cart = await cartModel.findOne({ userId })
+    const cart = await Cart.findOne({ userId })
     let qtyInCart = 0
     if (cart) {
         for (const item of cart.products) {
@@ -43,10 +43,10 @@ export const createCartorAddToCart = asyncHandler(async (req = request, res = re
     const validate_product = await validateProduct(req.user._id, productId, quantity, color, size)
     if (validate_product.error) return next(new Error(validate_product.error, { cause: validate_product.cause || 400 }))
     // check if user already have a cart
-    const cart = await cartModel.findOne({ userId: req.user._id })
+    const cart = await Cart.findOne({ userId: req.user._id })
     //  create new cart if not found and add product to it
     if (!cart) {
-        const newCart = await cartModel.create({
+        const newCart = await Cart.create({
             userId: req.user._id,
             products: [
                 {
@@ -91,7 +91,7 @@ export const createCartorAddToCart = asyncHandler(async (req = request, res = re
 */
 export const removeItem = asyncHandler(async (req = request, res = response, next) => {
     const { itemId } = req.body
-    const cart = await cartModel.updateOne(
+    const cart = await Cart.updateOne(
         { userId: req.user._id },
         {
             $pull: {
@@ -113,7 +113,7 @@ export const removeItem = asyncHandler(async (req = request, res = response, nex
 */
 export const updateQuantity = asyncHandler(async (req = request, res = response, next) => {
     const { itemId, quantity } = req.body
-    const cart = await cartModel.updateOne(
+    const cart = await Cart.updateOne(
         { userId: req.user._id, 'products._id': itemId },
         {
             $set: { 'products.$.quantity': quantity },
@@ -134,7 +134,7 @@ export const updateQuantity = asyncHandler(async (req = request, res = response,
 
 export const updateSizeOrColor = asyncHandler(async (req = request, res = response, next) => {
     const { itemId, productId, size, color } = req.body
-    const check = await cartModel.findOne({
+    const check = await Cart.findOne({
         userId: req.user._id,
         products: {
             $elemMatch: {
@@ -147,7 +147,7 @@ export const updateSizeOrColor = asyncHandler(async (req = request, res = respon
     })
     if (check) return next(new Error(`New variants already exist.`, { cause: 409 }))
 
-    const cart = await cartModel.updateOne(
+    const cart = await Cart.updateOne(
         { userId: req.user._id, 'products._id': itemId },
         {
             $set: {
@@ -170,7 +170,7 @@ export const updateSizeOrColor = asyncHandler(async (req = request, res = respon
 */
 
 export const clearCart = asyncHandler(async (req = request, res = response, next) => {
-    const cart = await cartModel.findOneAndUpdate({ userId: req.user._id }, { products: [] }, { new: true })
+    const cart = await Cart.findOneAndUpdate({ userId: req.user._id }, { products: [] }, { new: true })
     if (!cart) return next(new Error(`Cart not found.`, { cause: 404 }))
     return res.status(200).json({ message: 'success', cart })
 })
@@ -183,7 +183,7 @@ export const clearCart = asyncHandler(async (req = request, res = response, next
      -----------------------------------------------------------------
 */
 export const get = asyncHandler(async (req = request, res = response, next) => {
-    const cart = await cartModel.findOne({ userId: req.user._id }).populate({
+    const cart = await Cart.findOne({ userId: req.user._id }).populate({
         path: 'products',
         populate: {
             path: 'productId',
@@ -205,6 +205,6 @@ export const get = asyncHandler(async (req = request, res = response, next) => {
      -----------------------------------------------------------------
 */
 export const getAll = asyncHandler(async (req = request, res = response, next) => {
-    const carts = await cartModel.find().populate({ path: 'products', populate: { path: 'productId' } })
+    const carts = await Cart.find().populate({ path: 'products', populate: { path: 'productId' } })
     return res.status(200).json({ message: 'success', carts })
 })
