@@ -7,6 +7,12 @@ export const create = joi.object({
     productId: generalFields.id.required(),
 })
 
+export const getAll = joi.object({
+    page: joi.number().positive().min(1),
+    limit: joi.number().positive().min(1),
+    productId: generalFields.id,
+})
+
 export const update = joi.object({
     id: generalFields.id.required(),
     rating: joi.number().integer().min(1).max(5),

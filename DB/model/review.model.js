@@ -20,6 +20,7 @@ const reviewSchema = new Schema(
         },
         comment: {
             type: String,
+            required: true,
         },
     },
     {

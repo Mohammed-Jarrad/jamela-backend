@@ -46,6 +46,10 @@ const productSchema = new Schema(
             type: Boolean,
             default: false,
         },
+        averageRating: {
+            type: Number,
+            default: 0,
+        },
         mainImage: {
             type: Object,
             required: true,

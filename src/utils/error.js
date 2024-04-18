@@ -16,6 +16,7 @@ export const asyncHandler = (fn) => {
                     const value = error.errors[key]
                     messages.push(value.message)
                 })
+                console.log(error.stack)
                 return res.status(400).json({ messages, message: 'Validation error.' })
             }
 

@@ -146,4 +146,10 @@ export const resetPassword = asyncHandler(async (req = request, res = response, 
     return res.status(200).json({ message: 'success' })
 })
 // TODO // delete all users accounts, and delete all images that related to these accounts
-export const deleteNotConfirmedUsers = asyncHandler(async (req = request, res = response, next) => {})
+export const deleteNotConfirmedUsers = asyncHandler(async (req = request, res = response, next) => {
+    const users = await User.deleteMany({ confirmEmail: false })
+    if (!users) {
+        return next(new Error(`Users not found.`, { cause: 404 }))
+    }
+    return res.status(200).json({ message: 'success' })
+})

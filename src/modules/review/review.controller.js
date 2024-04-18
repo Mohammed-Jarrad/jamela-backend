@@ -1,20 +1,38 @@
 import { request, response } from 'express'
 import Review from '../../../DB/model/review.model.js'
-import { asyncHandler } from "../../utils/error.js"
+import { asyncHandler } from '../../utils/error.js'
+import { pagination } from '../../utils/pagination.js'
+import Product from '../../../DB/model/product.model.js'
 
 /** ---------------------------------------
  * @desc get all reviews
  * @route /reviews
  * @method GET
- * @access only admin
+ * @access all
  * ----------------------------------------
  */
 export const getAll = asyncHandler(async (req = request, res = response, next) => {
-    const reviews = await Review.find().populate([
-        { path: 'userId', select: 'username email image' },
-        { path: "productId", select: "name mainImage" },
-    ])
-    return res.status(200).json({ message: 'success', reviews })
+    const { productId } = req.query
+    const { limit, skip } = pagination(req.query)
+
+    const reviews = await Review.find({
+        ...(productId && { productId }),
+    })
+        .skip(skip)
+        .limit(limit)
+        .populate([
+            { path: 'userId', select: 'username email image' },
+            { path: 'productId', select: 'name mainImage' },
+        ])
+
+    // get total count of reviews without pagination to be used in pagination
+    const totalResultsCounts = (await Review.find({ ...(productId && { productId }) })).length
+    return res.status(200).json({
+        message: 'success',
+        reviews,
+        totalResultsCounts,
+        resultCount: reviews.length,
+    })
 })
 
 /** ----------------------------------------
@@ -30,7 +48,15 @@ export const create = asyncHandler(async (req = request, res = response, next) =
     // i need to allow user to create just one review on one product
     const review = await Review.findOne({ userId, productId })
     if (review) return next(new Error(`You have already reviewed this product.`, { cause: 400 }))
-    const newReview = await Review.create({ userId, productId, rating, ...(comment && { comment }) })
+    const newReview = await Review.create({ userId, productId, rating, comment })
+    const product = await Product.findById(productId)
+    // get the reviews for this product
+    const totalReviews = await Review.find({ productId })
+    const totalRating = totalReviews.reduce((acc, rev) => acc + rev.rating, 0)
+    product.averageRating = totalRating / totalReviews.length
+    // save the product
+    await product.save()
+
     return res.status(201).json({ message: 'success', review: newReview })
 })
 /** ----------------------------------------
@@ -47,6 +73,7 @@ export const update = asyncHandler(async (req = request, res = response, next) =
     const review = await Review.findOne({ userId, _id: reviewId })
     // check if review founded
     if (!review) return next(new Error(`Review not found or access denied.`, { cause: 404 }))
+    if (review.userId.toString() !== userId.toString()) return next(new Error(`Access denied.`, { cause: 400 }))
     // update the review
     const updatedReview = await Review.findByIdAndUpdate(
         reviewId,
@@ -56,6 +83,15 @@ export const update = asyncHandler(async (req = request, res = response, next) =
         },
         { new: true }
     )
+    // update the product
+    const product = await Product.findById(review.productId)
+    const totalReviews = await Review.find({ productId: review.productId })
+    const totalRating = totalReviews.reduce((acc, rev) => acc + rev.rating, 0)
+    console.log(totalRating)
+    console.log(totalReviews.length)
+    product.averageRating = totalRating / totalReviews.length
+    // save the product
+    await product.save()
     return res.status(200).json({ message: 'success', review: updatedReview })
 })
 /** ----------------------------------------
@@ -76,5 +112,14 @@ export const deleteReview = asyncHandler(async (req = request, res = response, n
     if (!review) return next(new Error(`Review not found or access denied.`, { cause: 404 }))
     // delete the review
     await review.deleteOne()
+    console.log(review)
+    // update the product
+    const product = await Product.findById(review.productId)
+    const totalReviews = (await Review.find({ productId: review.productId.toString() })) || []
+    const totalRating = totalReviews.reduce((acc, rev) => acc + rev.rating, 0) || 0
+    product.averageRating = totalRating / totalReviews.length || 0
+    // save the product
+    await product.save()
+    // send response
     return res.status(200).json({ message: 'success' })
 })
