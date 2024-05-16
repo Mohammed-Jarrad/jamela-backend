@@ -40,11 +40,13 @@ export const createProduct = asyncHandler(async (req = request, res = response, 
         `${process.env.APP_NAME}/products/${name}/mainImages`
     )
     // upload sub images to cloudinary
-    req.body.subImages = await Promise.all(
-        req.files.subImages.map(async (subImage) => {
-            return await cloudinaryUploadImage(subImage.path, `${process.env.APP_NAME}/products/${name}/subImages`)
-        })
-    )
+    if (req.files.subImages && req.files.subImages.length > 0) {
+        req.body.subImages = await Promise.all(
+            req.files.subImages.map(async (subImage) => {
+                return await cloudinaryUploadImage(subImage.path, `${process.env.APP_NAME}/products/${name}/subImages`)
+            })
+        )
+    }
     // set createdBy and updatedBy
     req.body.createdBy = req.user._id
     req.body.updatedBy = req.user._id
@@ -189,17 +191,15 @@ export const getProductsWithCategory = asyncHandler(async (req = request, res = 
 export const getProduct = asyncHandler(async (req = request, res = response, next) => {
     if (!req.query.productId && !req.query.slug)
         return next(new Error(`Product id or slug is required.`, { cause: 404 }))
-    const product = await Product
-        .findOne({
-            ...(req.query.productId && { _id: req.query.productId }),
-            ...(req.query.slug && { slug: req.query.slug }),
-        })
-        .populate([
-            { path: 'createdBy', select: 'username' },
-            { path: 'updatedBy', select: 'username' },
-            { path: 'categoryId', select: 'name' },
-            { path: 'subcategoryId', select: 'name' },
-        ])
+    const product = await Product.findOne({
+        ...(req.query.productId && { _id: req.query.productId }),
+        ...(req.query.slug && { slug: req.query.slug }),
+    }).populate([
+        { path: 'createdBy', select: 'username' },
+        { path: 'updatedBy', select: 'username' },
+        { path: 'categoryId', select: 'name' },
+        { path: 'subcategoryId', select: 'name' },
+    ])
     if (!product) return next(new Error(`Product not found.`, { cause: 404 }))
     return res.status(200).json({ message: 'success', product })
 })
@@ -216,14 +216,13 @@ export const getActiveProducts = asyncHandler(async (req = request, res = respon
     const searchObj = getSearchQuery(req.query?.search, 'name', 'description')
     const sortString = getSortQuery(req.query?.sort)
     const selectString = getSelectQuery(req.query?.select)
-    const products = await Product
-        .find({
-            status: 'Active',
-            ...foramatObj,
-            ...searchObj,
-            ...(req.query?.categoryId && { categoryId: req.query?.categoryId }),
-            ...(req.query?.subcategoryId && { subcategoryId: req.query?.subcategoryId }),
-        })
+    const products = await Product.find({
+        status: 'Active',
+        ...foramatObj,
+        ...searchObj,
+        ...(req.query?.categoryId && { categoryId: req.query?.categoryId }),
+        ...(req.query?.subcategoryId && { subcategoryId: req.query?.subcategoryId }),
+    })
         .limit(limit)
         .skip(skip)
         .sort(sortString)
@@ -237,15 +236,13 @@ export const getActiveProducts = asyncHandler(async (req = request, res = respon
             { path: 'subcategoryId', select: 'name ' },
         ])
     const totalCount = await Product.find({ status: 'Active' }).countDocuments()
-    const totalResultsCounts = await Product
-        .find({
-            status: 'Active',
-            ...foramatObj,
-            ...searchObj,
-            ...(req.query?.categoryId && { categoryId: req.query?.categoryId }),
-            ...(req.query?.subcategoryId && { subcategoryId: req.query?.subcategoryId }),
-        })
-        .select('name')
+    const totalResultsCounts = await Product.find({
+        status: 'Active',
+        ...foramatObj,
+        ...searchObj,
+        ...(req.query?.categoryId && { categoryId: req.query?.categoryId }),
+        ...(req.query?.subcategoryId && { subcategoryId: req.query?.subcategoryId }),
+    }).select('name')
     return res.status(200).json({
         message: 'success',
         products,
@@ -269,8 +266,7 @@ export const getProducts = asyncHandler(async (req = request, res = response, ne
     const sortString = getSortQuery(req.query?.sort)
     const selectString = getSelectQuery(req.query?.select)
 
-    const products = await Product
-        .find({ ...foramatObj, ...searchObj })
+    const products = await Product.find({ ...foramatObj, ...searchObj })
         .limit(limit)
         .skip(skip)
         .sort(sortString)

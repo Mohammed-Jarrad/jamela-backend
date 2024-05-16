@@ -35,7 +35,7 @@ export const create = joi.object({
                 .items(generalFields.file.required())
                 .max(4)
                 .min(1)
-                .required()
+                // .required()
                 .label('Secondary images'),
         })
         .required(),
