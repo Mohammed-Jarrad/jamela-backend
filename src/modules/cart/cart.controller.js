@@ -7,7 +7,7 @@ import { asyncHandler } from '../../utils/error.js'
 const validateProduct = async (userId, productId, quantity, color, size) => {
     const pro = await Product.findById(productId)
     if (!pro) return { error: 'Product not found.', cause: 404 }
-    
+
     const cart = await Cart.findOne({ userId })
     let qtyInCart = 0
     if (cart) {

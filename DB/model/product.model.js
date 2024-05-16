@@ -56,7 +56,8 @@ const productSchema = new Schema(
         },
         subImages: {
             type: [Object],
-            required: true,
+            default: [],
+            // required: true,
         },
         number_sellers: {
             type: Number,
